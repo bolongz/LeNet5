@@ -112,19 +112,21 @@ class Lenet5():
             total_steps = trange(epochs)
             for epoch in total_steps:
                 E.append(epoch+1)
+                ll = 0
+                cc = 0
                 self.train_data, self.train_labels = shuffle(self.train_data, self.train_labels)
                 for offset in range(0, num_examples, batch_size):
                     end = offset + batch_size
                     X_batch, y_batch = self.train_data[offset:end], self.train_labels[offset:end]
                     _, acc, cross, loss_ = session.run([self.training_step, self.accuracy_operation, self.cross_entropy, self.loss_op],
                                                 feed_dict={self.X: X_batch, self.y: y_batch})
-                #    print("LOSS ", loss_)
-                #print(X_batch.shape)
-                loss_t, train_accuracy = self.evaluate(self.train_data, self.train_labels,  batch_size)
-                loss_train.append(loss_t)
-                accuracy_train.append(train_accuracy)
-                print("Training set: Epoch: ", epoch+1, train_accuracy, loss_t)
+                    ll += loss_ * batch_size
+                    cc += acc * batch_size
 
+                # loss_t, train_accuracy = self.evaluate(self.train_data, self.train_labels,  batch_size)
+                loss_train.append(ll/num_examples)
+                accuracy_train.append(cc/num_examples)
+                print("Training set: Epoch: ", epoch+1, cc/num_examples, ll/num_examples)
                 if self.validation_data is not None:
                     loss_v, validation_accuracy = self.evaluate(self.validation_data, self.validation_labels, batch_size)
                     loss_val.append(loss_v)
@@ -145,12 +147,21 @@ class Lenet5():
                 if auto_save and (epoch % 10 == 0):
                     save_path = self.saver.save(session, 'tmp/model.ckpt'.format(epoch))
             _, test_accuracy = self.evaluate(self.test_data, self.test_labels, batch_size=batch_size)
-            line1, = plt.plot(E, loss_train, color='b', label = "train_loss", lw=2)
-            line2, = plt.plot(E, accuracy_train, '--', color='r', label = "train_accuracy", lw=2)
+            line1, = plt.plot(E, loss_train, color='b', label = "train set loss", lw=2)
+            line2, = plt.plot(E, loss_val,  color='r', label = "validation set loss", lw=2)
+            line3, = plt.plot(E, loss_test, color='g', label = "test set loss", lw=2)
             #plt.plot(stoch_points, mean - int_conf, '--', color='r',lw=2)
             plt.legend(handler_map={line1: HandlerLine2D(numpoints=2)}, prop={'size':15})
             #plt.show()
-            plt.savefig("train.pdf", bbox_inches='tight')
+            plt.savefig("loss.pdf", bbox_inches='tight')
+            plt.clf()
+
+            line4, = plt.plot(E, accuracy_train, color='b', label = "train set accuracy", lw=2)
+            line5, = plt.plot(E, accuracy_val,  color='r', label = "validation set accuracy", lw=2)
+            line6, = plt.plot(E, accuracy_test, color='g', label = "test set accuracy", lw=2)
+            #plt.plot(stoch_points, mean - int_conf, '--', color='r',lw=2)
+            plt.legend(handler_map={line1: HandlerLine2D(numpoints=2)}, prop={'size':15})
+            plt.savefig("acc.pdf", bbox_inches='tight')
             return test_accuracy
 
     def evaluate(self, X_data, y_data, batch_size):
